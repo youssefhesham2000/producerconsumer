@@ -24,10 +24,12 @@
               elevation="8"
               large
               outlined  
+              @click="initiateP()"
             >
               initiate process
             </v-btn>
             <v-btn
+            v-show="initiated&&!finishQ"
              depressed
               elevation="8"
               large
@@ -36,23 +38,52 @@
             >
               Add Q
             </v-btn>
+             <v-btn
+            v-if="initiated"
+             depressed
+              elevation="8"
+              large
+              outlined
+              @click="finishNewQ()"
+            >
+              finish adding Qs
+            </v-btn>
             <v-btn
+            v-if="finishQ"
              depressed
               elevation="8"
               large
               outlined
               color=" secondary"
+              @click="Done()"
             >
               Done
             </v-btn>
             <v-btn
+            v-show="ready"
              depressed
               elevation="8"
               large
               outlined
                 color=" primary"
+                @click="sendData()"
             >
               Start simulation
+            </v-btn>
+             <v-text-field
+              v-model="numOfProducts"
+              label="Enter number of products"
+              clearable
+            ></v-text-field>
+              <v-btn
+             depressed
+              elevation="8"
+              large
+              outlined
+                color=" primary"
+                @click="getNumberOfProducts()"
+            >
+              Enter
             </v-btn>
           </v-btn-toggle>
         </v-row>
@@ -74,6 +105,7 @@
        <v-menu>
         <template v-slot:activator="{ on, attrs }">
          <v-btn 
+            v-show="finishQ&&object.num!=lastQ-1&&!ready"
        elevation="8"
         outlined
         large
@@ -105,6 +137,7 @@
        <v-menu>
         <template v-slot:activator="{ on, attrs }">
           <v-btn
+             v-show="finishQ&&object.num!=lastQ-1&&!ready"
             depressed
             elevation="10"
             outlined
@@ -129,7 +162,7 @@
             v-on="on"
             @click="addMachine(exisitmachine.num,object.num)"
           >
-            M{{ exisitmachine }}
+            M{{ exisitmachine.num }}
           </v-btn>
           </v-list-item>
         </v-list>
@@ -157,14 +190,20 @@ import Method from"./utils.js"
   export default {
     name: 'HelloWorld',
     QS:[],
-    
-    
     data: () => ({
+      nEntered:false,
+       ready:false,
+       finishQ:false,
+      initiated:false,
+      checkingAccuracy:[],
+      numOfProducts:'',
   MCounter:0,
   lastQ:0,
    selectedQ:'',
    validMachines:[],
     validQs:[],
+    indexI:[],
+    indexJ:[],
    Ms:[
       
      /* [
@@ -226,21 +265,31 @@ import Method from"./utils.js"
           for(var l=0;l<this.Ms.length;l++){
             for(var f=0;f<this.Ms[l].length;f++){
               if(!notValidM.includes(this.Ms[l][f].num)&&!this.validMachines.includes(this.Ms[l][f].num)){
-                  this.validMachines.push(this.Ms[l][f].num);
+                  this.validMachines.push(this.Ms[l][f]);
               }
             }
 
           
         }
-       
-
       },
       addNewM(qNum,Qto){
         console.log(qNum);
-        var newM={num:this.MCounter,color:'#32CD32',comeFrom:[qNum],connectsTo:Qto}
+        var CF=[];
+        CF.push(qNum);
+        var newM={num:this.MCounter,color:'#32CD32',comeFrom:CF,connectsTo:Qto}
         this.Ms[qNum].push(newM);
         this.MCounter=this.MCounter+1;
          console.log(this.Ms);
+         if(this.checkingAccuracy.length==0){
+           this.checkingAccuracy.push(qNum);
+           this.checkingAccuracy.push(Qto);
+         }
+         else if(!this.checkingAccuracy.includes(qNum)){
+            this.checkingAccuracy.push(qNum);
+         }
+         else if(!this.checkingAccuracy.includes(Qto)){
+            this.checkingAccuracy.push(Qto);
+         }
 
       },
       addNewQ(){
@@ -255,10 +304,15 @@ import Method from"./utils.js"
       addMachine(Mnum,Qnum){
         for(var i=0;i<this.validMachines.length;i++){
           if(this.validMachines[i].num==Mnum){
-            var IN=this.validMachines[i].comeFrom;
+            var IN=[];
+            console.log(this.validMachines);
+            for( var j=0;j<this.validMachines[i].comeFrom.length;j++){
+              IN.push(this.validMachines[i].comeFrom[i]);
+            }
             IN.push(Qnum);
             var newM={num:Mnum,color:this.validMachines[i].color,comeFrom:IN,connectsTo:this.validMachines.connectsTo};
           this.Ms[Qnum].push(newM);
+           console.log(this.Ms);
           }
         }
       },
@@ -282,6 +336,8 @@ import Method from"./utils.js"
            }
            console.log(this.validQs);
          }
+        
+
 
         
         
@@ -318,8 +374,101 @@ import Method from"./utils.js"
         }
         var returned=[M,Q];
         return returned;
-      }    
-    
+      },
+      machineFlash(Mnum){
+        this.indexI=[];
+        this.indexJ=[];
+        for(var i=0;i<this.Ms.length;i++){
+          for(var j=0;j<this.Ms[i].length;j++){
+            if(this.Ms[i][j].num==Mnum){
+              this.Ms[i][j].color='#FF0000';
+              this.indexI.push(i);
+              this.indexJ.push(j);
+            }
+          }
+        }
+        console.log(this.indexI);
+        console.log(this.indexJ);
+        
+        for(var k=0;k<this.indexI.length;k++){
+          setTimeout(() => { this.cahngeColor(this.Ms[this.indexI.pop()][this.indexJ.pop()],'#32CD32'); }, 500);
+        }
+      },
+      cahngeColor(M,color){
+        M.color=color;
+      },
+      initiateP(){
+        this.addNewQ();
+        this.addNewQ();
+        this.initiated=true;
+      },
+      finishNewQ(){
+        this.finishQ=true;
+      },    
+      Done(){
+        if(this.checkingAccuracy.length!=this.lastQ){
+          alert("invalid process");
+          console.log(this.checkingAccuracy.length)
+           console.log(this.lastQ)
+        }
+        else if(!this.nEntered){
+          alert("enter n  ");
+        }
+        else{
+ this.ready=true;
+        //call fetch
+
+        }
+       
+      },
+      getNumberOfProducts(){
+        var pattern = /^[1-9]\d*$/;
+        if(this.numOfProducts.match(pattern)){
+        console.log(  "worked"); 
+        this.nEntered=true; 
+        }
+        console.log(  this.numOfProducts);
+      
+        
+      },
+      sendData(){
+        return fetch("http://localhost:8080/",
+        {
+           method:'post',
+            headers: { "Content-Type": "application/json",
+            'Accept': 'application/json'
+            },
+             body: JSON.stringify(this.getDataReady()),
+        }
+        )
+      },
+      getDataReady(){
+        var returned=[];
+        var n_items=this.numOfProducts;
+        var n_machines=this.MCounter;
+        var n_queues=this.lastQ;
+        var queues_machines=[];
+         var machines_queues=[];
+        var mNum=0;
+        for(var i=0;i<this.Ms.length;i++){
+          var currentQ =[];
+          for(var j=0;j<this.Ms[i].length;j++){
+            currentQ.push(this.Ms[i][j].num);
+            if(this.Ms[i][j].num==mNum){
+              machines_queues.push(this.Ms[i][j].connectsTo);
+              mNum++;
+            }
+          }
+          queues_machines.push(currentQ);
+        }
+        returned.push(n_items);
+         returned.push(n_machines);
+          returned.push(n_queues);
+           returned.push(queues_machines);
+            returned.push(machines_queues);
+            return returned;
+        
+      }
 
       
     }),
