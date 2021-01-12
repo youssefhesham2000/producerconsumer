@@ -204,6 +204,7 @@ import Method from"./utils.js"
     validQs:[],
     indexI:[],
     indexJ:[],
+    ReturnedToBack:[],
    Ms:[
       
      /* [
@@ -417,6 +418,7 @@ import Method from"./utils.js"
         else{
  this.ready=true;
         //call fetch
+        this.sendData();
 
         }
        
@@ -428,17 +430,17 @@ import Method from"./utils.js"
         this.nEntered=true; 
         }
         console.log(  this.numOfProducts);
-      
-        
       },
       sendData(){
-        return fetch("http://localhost:8080/",
+         this.getDataReady();
+        return fetch("http://localhost:8080/done",
         {
            method:'post',
             headers: { "Content-Type": "application/json",
             'Accept': 'application/json'
             },
-             body: JSON.stringify(this.getDataReady()),
+           
+             body: JSON.stringify({n_items:this.ReturnedToBack[0],n_machines:this.ReturnedToBack[1],n_queues:this.ReturnedToBack[2],queues_machines:this.ReturnedToBack[3],machines_queues:this.ReturnedToBack[4]}),
         }
         )
       },
@@ -451,24 +453,42 @@ import Method from"./utils.js"
          var machines_queues=[];
         var mNum=0;
         for(var i=0;i<this.Ms.length;i++){
-          var currentQ =[];
           for(var j=0;j<this.Ms[i].length;j++){
-            currentQ.push(this.Ms[i][j].num);
             if(this.Ms[i][j].num==mNum){
+              queues_machines.push(this.Ms[i][j].comeFrom);
               machines_queues.push(this.Ms[i][j].connectsTo);
               mNum++;
             }
           }
-          queues_machines.push(currentQ);
         }
         returned.push(n_items);
          returned.push(n_machines);
           returned.push(n_queues);
            returned.push(queues_machines);
             returned.push(machines_queues);
-            return returned;
+            
+            this.ReturnedToBack=returned;
+        console.log(this.ReturnedToBack);
+      },
+      getData(){
+        return fetch("http://localhost:8080/getFrame",
+        {
+           method:'get',
+            headers: { "Content-Type": "application/json",
+            'Accept': 'application/json'
+            },
+        }
+        ).then(response=> response.json())
+        .then(body=>{
+          
+          body.queues
+            console.log(body[0])
+            return body    
+        })
+
         
-      }
+      },
+
 
       
     }),
