@@ -71,6 +71,18 @@
             >
               Start simulation
             </v-btn>
+            <v-btn
+            v-show="ready&&!resetReady"
+             depressed
+              elevation="8"
+              large
+              outlined
+                color=" primary"
+                @click="startOperation()"
+            >
+              Start operation
+            </v-btn>
+
              <v-btn
             v-show="resetReady&&!restartReady"
              depressed
@@ -512,9 +524,9 @@ import Method from"./utils.js"
        
         )
       },
+      
       startSimulation(){
         var flag=true;
-        this.startOperation();
         while(flag){
            setTimeout(() => { this.getData(); }, 1000);
           if(this.objects[this.lastQ-1].current==this.numOfProducts){
@@ -569,6 +581,7 @@ import Method from"./utils.js"
         }
         ).then(response=> response.json())
         .then(body=>{
+          console.log("we are here");
           console.log(body);
           for(var i =0;i<body[0].length;i++){
             this.objects[i].current=body[0][i];
