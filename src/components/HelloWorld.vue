@@ -105,6 +105,17 @@
             >
                Resimulate
             </v-btn>
+              <v-btn
+            v-show="resetReady&&!restartReady"
+             depressed
+              elevation="8"
+              large
+              outlined
+                color=" primary"
+                @click="newSimulate()"
+            >
+              new Simulation
+            </v-btn>
             
              <v-text-field
               v-model="numOfProducts"
@@ -287,6 +298,38 @@ import Method from"./utils.js"
       current:5
       }*/
     ],
+    newSimulate(){
+       this.Ms=[];
+       this.objects=[];
+        this.nEntered=false;
+       this.ready=false;
+       this.finishQ=false;
+      this.initiated=false;
+      this.checkingAccuracy=[];
+      this.numOfProducts='';
+      this.resetReady=false; 
+     this.restartReady=false;         
+  this.MCounter=0;
+  this.lastQ=0;
+   this.selectedQ='';
+       this.validMachines=[];
+        this.validQs=[];
+        this.indexI=[];
+        this.indexJ=[];
+        this.ReturnedToBack=[];
+        this.showReSim=false;
+       return fetch("http://localhost:8080/newSimulation",
+        {
+           method:'post',
+            headers: { "Content-Type": "application/json",
+            'Accept': 'application/json'
+            },
+         }
+       
+        )
+         
+
+    },
     methods:new Method(),
     modifyValidMachine(num){
       this.validMachines=[];
@@ -665,9 +708,8 @@ import Method from"./utils.js"
       },
       
 
-      
     }),
-   
+  
      
   }  
 </script>
