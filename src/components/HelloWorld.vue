@@ -67,12 +67,12 @@
               large
               outlined
                 color=" primary"
-                @click="startSimulation()"
+                @click="startSimulation(objects,lastQ,numOfProducts,Ms,indexI,indexJ ,resetReady)"
             >
               Start simulation
             </v-btn>
             <v-btn
-            v-show="ready&&!resetReady"
+            v-show="ready"
              depressed
               elevation="8"
               large
@@ -95,26 +95,17 @@
               reset Data
             </v-btn>
              <v-btn
-            v-show="restartReady"
+            v-show="showReSim"
              depressed
               elevation="8"
               large
               outlined
                 color=" primary"
-                @click="startSimulation()"
+                @click="startSimulation(objects,lastQ,numOfProducts,Ms,indexI,indexJ ,resetReady)"
             >
                Resimulate
             </v-btn>
-             <v-btn
-             depressed
-              elevation="8"
-              large
-              outlined
-                color=" primary"
-                @click="test()"
-            >
-               test
-            </v-btn>
+            
              <v-text-field
               v-model="numOfProducts"
               label="Enter number of products"
@@ -139,7 +130,6 @@
             v-model="toggle_exclusive"
           >
       <v-btn 
-      v-if="object.type=='q'"
        elevation="8"
         outlined
         large
@@ -216,14 +206,19 @@
       <p>
         n={{object.current}}
       </p>
+ <v-btn-toggle  v-for="machine in Ms[object.num]" :key="machine.num">
        <v-btn 
-        v-for="machine in Ms[object.num]" :key="machine.num"
+       
        elevation="8"
         large
-        :color= machine.color 
+        :color= machine.color
       >
         M{{machine.num}}
       </v-btn>
+      <p>
+        attached to Q{{machine.connectsTo}}
+      </p>
+       </v-btn-toggle>
       
     </v-container>
   </v-app>
@@ -234,7 +229,7 @@
 import Method from"./utils.js"
   export default {
     name: 'HelloWorld',
-    QS:[],
+   
     data: () => ({
       nEntered:false,
        ready:false,
@@ -252,6 +247,7 @@ import Method from"./utils.js"
     indexI:[],
     indexJ:[],
     ReturnedToBack:[],
+    showReSim:false,
    Ms:[
       
      /* [
@@ -497,7 +493,7 @@ import Method from"./utils.js"
        
         )
       },
-       /*test(){
+       test(){
         this.getDataReady();
         return fetch("http://localhost:8080/test",
         {
@@ -512,28 +508,102 @@ import Method from"./utils.js"
         .then(body=>{
           console.log(body);
         })
-      },*/
+      },
        startOperation(){
         return fetch("http://localhost:8080/operate",
         {
            method:'post',
             headers: { "Content-Type": "application/json",
-            'Accept': 'application/json'
+            
             },
          }
        
         )
       },
       
-      startSimulation(){
-        var flag=true;
-        while(flag){
-           setTimeout(() => { this.getData(); }, 1000);
-          if(this.objects[this.lastQ-1].current==this.numOfProducts){
-            flag=false;
-            this.resetReady=true;
-          }
+
+
+
+
+
+
+
+      startSimulation(objects,lastQ,numOfProducts,Ms,indexI,indexJ,resetReady ){
+     //   var flag=true;
+      var myvar;
+      
+          if(this.objects[this.lastQ-1].current!=this.numOfProducts){
+            
+          myvar= setInterval(function(){
+
+              console.log("before fetch"); 
+               return fetch("http://localhost:8080/getFrame",
+        {
+           method:'post',
+            headers: { "Content-Type": "application/json",
+            'Accept': 'application/json'
+            },
         }
+        ).then(response=> response.json())
+        .then(body=>{
+         
+          
+          for(var i =0;i<body[0].length;i++){
+           
+            objects[i].current=body[0][i];
+          }
+          for(var j=0;j<body[1].length;j++){
+            for(var l=0;l<Ms.length;l++){
+              for(var k=0;k<Ms[l].length;k++){
+                if(Ms[l][k].num==j){
+                  console.log("the color is");
+                   console.log(body[1][j]);
+                  if(Ms[l][k].color!=body[1][j]&&Ms[l][k].color!='#32CD32'){
+                    //machineFlash(j);
+                          indexI=[];
+                        indexJ=[];
+                        for( var r=0;r<Ms.length;r++){
+                          for( var z=0;z<Ms[r].length;z++){
+                              if(Ms[r][z].num==j){
+                                    Ms[r][z].color='#FF0000';
+                                    indexI.push(r);
+                                    indexJ.push(z);
+                        }
+                        }
+                        }
+                             console.log(indexI);
+                       console.log(indexJ);
+        
+                            for( var m=0;m<indexI.length;m++){
+                                       setTimeout(() => { Ms[indexI.pop()][indexJ.pop()].color='#32CD32'; }, 500,Ms,indexI,indexJ);
+                                         console.log("the color is in the flash of item");
+                            }
+                  }
+                  else if(Ms[l][k].color!=(body[1][j])){
+                    Ms[l][k].color=body[1][j];
+                    console.log("the color is in the enter of item");
+                   console.log(Ms[l][k].color);
+                  }
+                }
+              }
+            }
+          }
+           if(objects[lastQ-1].current==numOfProducts){
+             clearInterval(myvar);
+           // flag=false;
+            resetReady=true;
+          }
+          console.log(Ms);
+               console.log(objects);
+        })
+    //this code runs every second 
+},1000,objects,lastQ,numOfProducts,Ms,indexI,indexJ,resetReady );
+   }
+   this.resetReady=true;
+
+          // setTimeout(() => { console.log("before fetch");this.getData(); }, 1);
+     
+      
       },
       getDataReady(){
         var returned=[];
@@ -562,6 +632,7 @@ import Method from"./utils.js"
         console.log(this.ReturnedToBack);
       },
       resimulate(){
+        this.showReSim=true;
          return fetch("http://localhost:8080/reSimulate",
         {
            method:'post',
@@ -569,42 +640,34 @@ import Method from"./utils.js"
             'Accept': 'application/json'
             },
         }
-        )
-      },
-      getData(){
-        return fetch("http://localhost:8080/getFrame",
-        {
-           method:'post',
-            headers: { "Content-Type": "application/json",
-            'Accept': 'application/json'
-            },
-        }
         ).then(response=> response.json())
-        .then(body=>{
-          console.log("we are here");
-          console.log(body);
-          for(var i =0;i<body[0].length;i++){
-            this.objects[i].current=body[0][i];
-          }
-          for(var j=0;j<body[1].length;j++){
-            for(var l=0;l<this.Ms.length;l++){
-              for(var k=0;k<this.Ms[l].length;l++){
-                if(this.Ms[l][k].num==j){
-                  if(this.Ms[l][k].color!=body[1][j]&&this.Ms[l][k].color!='#32CD32'){
-                    this.machineFlash(j);
-                  }
-                  else if(this.Ms[l][k].color!=body[1][j]){
-                    this.Ms[l][k].color=body[1][j];
-                  }
-                }
-              }
-            }
-          }    
-        })
+           .then(body=>{
+             console.log("we are here");
+             console.log(body);
+             for(var i =0;i<body[0].length;i++){
+               this.objects[i].current=body[0][i];
+             }
+             for(var j=0;j<body[1].length;j++){
+               for(var l=0;l<this.Ms.length;l++){
+                 for(var k=0;k<this.Ms[l].length;l++){
+                   if(this.Ms[l][k].num==j){
+                     if(this.Ms[l][k].color!=body[1][j]&&this.Ms[l][k].color!='#32CD32'){
+                       this.machineFlash(j);
+                     }
+                     else if(this.Ms[l][k].color!=body[1][j]){
+                       this.Ms[l][k].color=body[1][j];
+                     }
+                   }
+                 }
+               }
+             }    
+           })
       },
-
+      
 
       
     }),
-  }
+   
+     
+  }  
 </script>
