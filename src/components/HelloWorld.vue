@@ -20,6 +20,7 @@
             rounded
           >
             <v-btn
+              v-show="!initiated"
              depressed
               elevation="8"
               large
@@ -49,7 +50,7 @@
               finish adding Qs
             </v-btn>
             <v-btn
-            v-if="finishQ"
+            v-if="finishQ&&!resetReady&&!ready"
              depressed
               elevation="8"
               large
@@ -60,15 +61,47 @@
               Done
             </v-btn>
             <v-btn
-            v-show="ready"
+            v-show="ready&&!resetReady"
              depressed
               elevation="8"
               large
               outlined
                 color=" primary"
-                @click="sendData()"
+                @click="startSimulation()"
             >
               Start simulation
+            </v-btn>
+             <v-btn
+            v-show="resetReady&&!restartReady"
+             depressed
+              elevation="8"
+              large
+              outlined
+                color=" primary"
+                @click="resimulate()"
+            >
+              reset Data
+            </v-btn>
+             <v-btn
+            v-show="restartReady"
+             depressed
+              elevation="8"
+              large
+              outlined
+                color=" primary"
+                @click="startSimulation()"
+            >
+               Resimulate
+            </v-btn>
+             <v-btn
+             depressed
+              elevation="8"
+              large
+              outlined
+                color=" primary"
+                @click="test()"
+            >
+               test
             </v-btn>
              <v-text-field
               v-model="numOfProducts"
@@ -197,6 +230,8 @@ import Method from"./utils.js"
       initiated:false,
       checkingAccuracy:[],
       numOfProducts:'',
+      resetReady:false, 
+     restartReady:false,         
   MCounter:0,
   lastQ:0,
    selectedQ:'',
@@ -433,16 +468,60 @@ import Method from"./utils.js"
       },
       sendData(){
          this.getDataReady();
+        /*const controller = new AbortController();
+        const signal = controller.signal;
+          setTimeout(() => controller.abort(), 5000);*/
+         
         return fetch("http://localhost:8080/done",
         {
+         
            method:'post',
             headers: { "Content-Type": "application/json",
             'Accept': 'application/json'
             },
            
              body: JSON.stringify({n_items:this.ReturnedToBack[0],n_machines:this.ReturnedToBack[1],n_queues:this.ReturnedToBack[2],queues_machines:this.ReturnedToBack[3],machines_queues:this.ReturnedToBack[4]}),
-        }
+         }
+       
         )
+      },
+       /*test(){
+        this.getDataReady();
+        return fetch("http://localhost:8080/test",
+        {
+           method:'post',
+            headers: { "Content-Type": "application/json",
+            'Accept': 'application/json'
+            },
+            body: JSON.stringify({n_items:this.ReturnedToBack[0],n_machines:this.ReturnedToBack[1],n_queues:this.ReturnedToBack[2],queues_machines:this.ReturnedToBack[3],machines_queues:this.ReturnedToBack[4]}),
+         }
+       
+        ).then(response=> response.json())
+        .then(body=>{
+          console.log(body);
+        })
+      },*/
+       startOperation(){
+        return fetch("http://localhost:8080/operate",
+        {
+           method:'post',
+            headers: { "Content-Type": "application/json",
+            'Accept': 'application/json'
+            },
+         }
+       
+        )
+      },
+      startSimulation(){
+        var flag=true;
+        this.startOperation();
+        while(flag){
+           setTimeout(() => { this.getData(); }, 1000);
+          if(this.objects[this.lastQ-1].current==this.numOfProducts){
+            flag=false;
+            this.resetReady=true;
+          }
+        }
       },
       getDataReady(){
         var returned=[];
@@ -470,23 +549,45 @@ import Method from"./utils.js"
             this.ReturnedToBack=returned;
         console.log(this.ReturnedToBack);
       },
+      resimulate(){
+         return fetch("http://localhost:8080/reSimulate",
+        {
+           method:'post',
+            headers: { "Content-Type": "application/json",
+            'Accept': 'application/json'
+            },
+        }
+        )
+      },
       getData(){
         return fetch("http://localhost:8080/getFrame",
         {
-           method:'get',
+           method:'post',
             headers: { "Content-Type": "application/json",
             'Accept': 'application/json'
             },
         }
         ).then(response=> response.json())
         .then(body=>{
-          
-          body.queues
-            console.log(body[0])
-            return body    
+          console.log(body);
+          for(var i =0;i<body[0].length;i++){
+            this.objects[i].current=body[0][i];
+          }
+          for(var j=0;j<body[1].length;j++){
+            for(var l=0;l<this.Ms.length;l++){
+              for(var k=0;k<this.Ms[l].length;l++){
+                if(this.Ms[l][k].num==j){
+                  if(this.Ms[l][k].color!=body[1][j]&&this.Ms[l][k].color!='#32CD32'){
+                    this.machineFlash(j);
+                  }
+                  else if(this.Ms[l][k].color!=body[1][j]){
+                    this.Ms[l][k].color=body[1][j];
+                  }
+                }
+              }
+            }
+          }    
         })
-
-        
       },
 
 
